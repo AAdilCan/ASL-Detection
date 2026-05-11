@@ -80,6 +80,7 @@ def main():
 
         if frame is not None:
             img = Image.open(frame).convert("RGB")
+            img = img.transpose(Image.FLIP_LEFT_RIGHT)
             img_np = np.array(img)
 
             features = extract_landmarks(img_np, hands)
