@@ -5,11 +5,12 @@ import pathlib
 import csv
 
 KAGGLE_JSON_PATH = pathlib.Path.home() / ".kaggle" / "kaggle.json"
-KAGGLE_DATASET = "granthgaurav/asl-mediapipe-converted-dataset"
+KAGGLE_DATASET = "grassknoted/asl-alphabet"
 KAGGLE_DATA_DIR = pathlib.Path("kaggle_data")
 DATA_DIR = pathlib.Path("data")
 SKIP_LABELS = {"J", "Z"}
 MIN_SAMPLES = 50
+MAX_IMAGES_PER_LABEL = 300  # cap to keep processing time reasonable (~5 min total)
 
 
 def print_setup_instructions():
@@ -36,7 +37,7 @@ def download_dataset():
     print(f"Downloading dataset: {KAGGLE_DATASET}")
     result = subprocess.run(
         [
-            sys.executable, "-m", "kaggle", "datasets", "download",
+            "kaggle", "datasets", "download",
             "-d", KAGGLE_DATASET,
             "--path", str(KAGGLE_DATA_DIR),
             "--unzip",
@@ -80,7 +81,8 @@ def find_image_folders():
             if images:
                 label = item.name.upper()
                 if label not in SKIP_LABELS:
-                    label_folders[label] = images
+                    # cap images per label to avoid multi-hour processing
+                    label_folders[label] = images[:MAX_IMAGES_PER_LABEL]
     return label_folders
 
 

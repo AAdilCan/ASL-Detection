@@ -27,7 +27,6 @@ env/
 *.spec
 
 # Project-specific
-model.pkl
 data/*.npy
 kaggle_data/
 confusion_matrix.png
