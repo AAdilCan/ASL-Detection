@@ -70,6 +70,9 @@ def main():
     if "vote_buffer" not in st.session_state:
         st.session_state.vote_buffer = collections.deque(maxlen=10)
 
+    flip = st.sidebar.checkbox("Mirror image (try toggling if predictions seem off)", value=False)
+    show_debug = st.sidebar.checkbox("Show debug info", value=False)
+
     col_cam, col_result = st.columns([3, 2])
 
     with col_cam:
@@ -80,7 +83,8 @@ def main():
 
         if frame is not None:
             img = Image.open(frame).convert("RGB")
-            img = img.transpose(Image.FLIP_LEFT_RIGHT)
+            if flip:
+                img = img.transpose(Image.FLIP_LEFT_RIGHT)
             img_np = np.array(img)
 
             features = extract_landmarks(img_np, hands)
@@ -88,11 +92,9 @@ def main():
             if features is not None:
                 proba = clf.predict_proba(features.reshape(1, -1))[0]
                 top_idx = int(np.argmax(proba))
-                st.session_state.vote_buffer.append(top_idx)
 
-                smoothed_idx = collections.Counter(st.session_state.vote_buffer).most_common(1)[0][0]
-                prediction = class_labels[smoothed_idx]
-                confidence = float(proba[smoothed_idx])
+                prediction = class_labels[top_idx]
+                confidence = float(proba[top_idx])
                 color = confidence_color(confidence)
                 desc = SIGN_DESCRIPTIONS.get(prediction, prediction)
 
@@ -110,9 +112,21 @@ def main():
                     st.warning("Medium confidence")
                 else:
                     st.error("Low confidence — try adjusting your hand position")
+
+                if show_debug:
+                    st.subheader("Debug")
+                    st.write(f"Image shape: {img_np.shape}, dtype: {img_np.dtype}")
+                    st.write(f"Raw top prediction this frame: {class_labels[top_idx]} ({proba[top_idx]:.2%})")
+                    top3_idx = np.argsort(proba)[::-1][:5]
+                    st.write("Top 5 probabilities:")
+                    for idx in top3_idx:
+                        st.write(f"  {class_labels[idx]}: {proba[idx]:.2%}")
+                    st.write(f"First 9 landmark values (x,y,z × 3): {features[:9].tolist()}")
             else:
                 st.session_state.vote_buffer.clear()
                 st.info("No hand detected. Make sure your hand is visible and well-lit.")
+                if show_debug:
+                    st.write(f"Image shape: {img_np.shape}, dtype: {img_np.dtype}")
         else:
             st.info("Take a photo to get a prediction.")
 
